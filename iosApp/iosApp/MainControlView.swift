@@ -7,6 +7,7 @@ struct MainControlView: View {
     @State private var brightness: Double = 100
     @State private var isPowerOn = true
     @State private var favoriteColors: [(r: Int, g: Int, b: Int)] = []
+    @State private var brightnessUpdateTask: Task<Void, Never>?
     
     var body: some View {
         NavigationView {
@@ -149,7 +150,19 @@ struct MainControlView: View {
                         Slider(value: $brightness, in: 0...100, step: 1)
                             .onChange(of: brightness) { newValue in
                                 if bleManager.isConnected {
-                                    bleManager.setBrightness(level: Int(newValue))
+                                    // İptal et önceki görev
+                                    brightnessUpdateTask?.cancel()
+                                    
+                                    // Debounce: Slider hareket ederken bekle, durduktan 150ms sonra gönder
+                                    brightnessUpdateTask = Task {
+                                        try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
+                                        guard !Task.isCancelled else { return }
+                                        await MainActor.run {
+                                            if bleManager.isConnected {
+                                                bleManager.setBrightness(level: Int(newValue))
+                                            }
+                                        }
+                                    }
                                 }
                             }
                     }
@@ -192,6 +205,14 @@ struct MainControlView: View {
             }
             .onAppear {
                 loadFavorites()
+                // Başlangıçta parlaklığı senkronize et
+                brightness = Double(bleManager.currentBrightness)
+            }
+            .onChange(of: bleManager.currentBrightness) { newBrightness in
+                // Dışarıdan parlaklık değiştiğinde (örneğin intent'lerden) slider'ı güncelle
+                if abs(brightness - Double(newBrightness)) > 1 {
+                    brightness = Double(newBrightness)
+                }
             }
         }
     }

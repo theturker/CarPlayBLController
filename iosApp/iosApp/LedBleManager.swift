@@ -39,6 +39,11 @@ final class LedBleManager: NSObject, ObservableObject {
     private var keepAliveTimer: Timer?
     private let keepAliveInterval: TimeInterval = 2.0 // Send keep-alive every 2 seconds (very frequent to prevent timeout)
     
+    // Brightness update tracking
+    private var lastSentBrightness: Int = -1
+    private var brightnessUpdateTime: Date?
+    private let brightnessUpdateCooldown: TimeInterval = 0.3 // 300ms cooldown between brightness updates
+    
     // Background task identifier for keeping app alive
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     
@@ -225,10 +230,20 @@ final class LedBleManager: NSObject, ObservableObject {
                 return
             }
             
+            // Skip keep-alive if we recently updated brightness (within cooldown period)
+            if let lastUpdateTime = self.brightnessUpdateTime {
+                let timeSinceLastUpdate = Date().timeIntervalSince(lastUpdateTime)
+                if timeSinceLastUpdate < self.brightnessUpdateCooldown {
+                    // Skip this keep-alive cycle to avoid interference
+                    return
+                }
+            }
+            
             // Send a minimal command to keep connection alive
             // Use brightness command with current brightness to avoid visible changes
             let brightness = self.currentBrightness
-            let brightnessValue = Int((Double(brightness) / 100.0) * 255.0)
+            // Direkt 0-100 arası değer gönder (0-255'e çevirme)
+            let brightnessValue = brightness
             let kotlinBytes = SharedLedController.shared.getBrightnessCommandBytes(brightness: Int32(brightnessValue))
             let data = kotlinBytes.toData()
             self.connectedPeripheral?.writeValue(data, for: characteristic, type: .withoutResponse)
@@ -326,17 +341,41 @@ final class LedBleManager: NSObject, ObservableObject {
             return
         }
         
-        // Map 0-100 to 0-255
-        let brightnessValue = Int((Double(level) / 100.0) * 255.0)
+        // Clamp level to valid range
+        let clampedLevel = max(0, min(100, level))
+        
+        // Check if we recently sent a brightness update (cooldown period)
+        if let lastUpdateTime = brightnessUpdateTime {
+            let timeSinceLastUpdate = Date().timeIntervalSince(lastUpdateTime)
+            if timeSinceLastUpdate < brightnessUpdateCooldown && lastSentBrightness == clampedLevel {
+                // Skip duplicate update within cooldown period
+                currentBrightness = clampedLevel
+                return
+            }
+        }
+        
+        // Bazı LED cihazları 0-100 arası değer bekler, bazıları 0-255
+        // ELK-BLEDOM genellikle 0-100 arası bekler
+        // Eğer 0-255 kullanılıyorsa: let brightnessValue = Int((Double(clampedLevel) / 100.0) * 255.0)
+        // Şimdilik direkt 0-100 arası değer gönderiyoruz
+        let brightnessValue = clampedLevel
+        
+        print("🔆 Setting brightness: \(clampedLevel)% -> byte value: \(brightnessValue)")
         
         // Get command bytes from KMP
         // Kotlin Int maps to Int32 in Swift
         let kotlinBytes = SharedLedController.shared.getBrightnessCommandBytes(brightness: Int32(brightnessValue))
         let data = kotlinBytes.toData()
         
+        // Debug: Print command bytes
+        let bytesString = data.map { String(format: "%02X", $0) }.joined(separator: " ")
+        print("📤 Brightness command: \(bytesString)")
+        
         // Use withoutResponse for faster writes
         connectedPeripheral?.writeValue(data, for: characteristic, type: .withoutResponse)
-        currentBrightness = level
+        currentBrightness = clampedLevel
+        lastSentBrightness = clampedLevel
+        brightnessUpdateTime = Date()
     }
     
     func powerOn() {
@@ -603,7 +642,8 @@ extension LedBleManager: CBPeripheralDelegate {
                     print("📤 Sending initial keep-alive command...")
                     if let characteristic = self.writeCharacteristic {
                         let brightness = self.currentBrightness
-                        let brightnessValue = Int((Double(brightness) / 100.0) * 255.0)
+                        // Direkt 0-100 arası değer gönder (0-255'e çevirme)
+                        let brightnessValue = brightness
                         let kotlinBytes = SharedLedController.shared.getBrightnessCommandBytes(brightness: Int32(brightnessValue))
                         let data = kotlinBytes.toData()
                         self.connectedPeripheral?.writeValue(data, for: characteristic, type: .withoutResponse)
