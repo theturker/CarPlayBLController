@@ -10,209 +10,318 @@ struct MainControlView: View {
     @State private var brightnessUpdateTask: Task<Void, Never>?
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Connection Status
-                    HStack {
-                        Circle()
-                            .fill(bleManager.isConnected ? Color.green : Color.red)
-                            .frame(width: 12, height: 12)
-                        Text(bleManager.connectionStatus)
-                            .font(.headline)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    
-                    if !bleManager.isConnected {
-                        NavigationLink(destination: DeviceSelectionView()) {
-                            Text("Cihaz Seç")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                        }
-                    }
-                    
-                    // Color Picker
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Renk Seç")
-                            .font(.headline)
-                        ColorPicker("Renk", selection: $selectedColor)
-                            .frame(height: 50)
-                            .onChange(of: selectedColor) { newColor in
-                                if bleManager.isConnected {
-                                    let uiColor = UIColor(newColor)
-                                    var r: CGFloat = 0
-                                    var g: CGFloat = 0
-                                    var b: CGFloat = 0
-                                    var a: CGFloat = 0
-                                    uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-                                    bleManager.setColor(
-                                        r: Int(r * 255),
-                                        g: Int(g * 255),
-                                        b: Int(b * 255)
-                                    )
+        ZStack {
+            // Arka plan gradient
+            ClioTheme.backgroundDark
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Header - Renault Clio Badge
+                        HStack(spacing: 12) {
+                            Image("cliorange")
+                                .resizable()
+                                .renderingMode(.original)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 132, height: 132)
+                                .shadow(color: ClioTheme.primaryOrange.opacity(0.4), radius: 8, x: 0, y: 4)
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Text("Renault Clio")
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .foregroundColor(ClioTheme.textPrimary)
+                                    Text("Alpine")
+                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        .foregroundColor(ClioTheme.primaryOrange)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule()
+                                                .fill(ClioTheme.primaryOrange.opacity(0.2))
+                                        )
+                                }
+                                
+                                // Connection Status
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(bleManager.isConnected ? Color.green : Color.red)
+                                        .frame(width: 10, height: 10)
+                                        .shadow(color: bleManager.isConnected ? Color.green.opacity(0.6) : Color.red.opacity(0.6), radius: 4)
+                                    Text(bleManager.connectionStatus)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(ClioTheme.textSecondary)
                                 }
                             }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    
-                    // Quick Color Buttons
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Hızlı Renkler")
-                            .font(.headline)
-                        HStack(spacing: 12) {
-                            QuickColorButton(color: .red, name: "Kırmızı") {
-                                setQuickColor(r: 255, g: 0, b: 0)
-                            }
-                            QuickColorButton(color: .blue, name: "Mavi") {
-                                setQuickColor(r: 0, g: 0, b: 255)
-                            }
-                            QuickColorButton(color: .green, name: "Yeşil") {
-                                setQuickColor(r: 0, g: 255, b: 0)
-                            }
-                            QuickColorButton(color: .purple, name: "Mor") {
-                                setQuickColor(r: 255, g: 0, b: 255)
-                            }
-                            QuickColorButton(color: .white, name: "Beyaz") {
-                                setQuickColor(r: 255, g: 255, b: 255)
+                            
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                        .clioCard()
+                        
+                        // Cihaz Seç Butonu (bağlı değilken göster)
+                        if !bleManager.isConnected {
+                            NavigationLink(destination: DeviceSelectionView()) {
+                                HStack {
+                                    Image(systemName: "antenna.radiowaves.left.and.right")
+                                    Text("Cihaz Seç")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .clioButton()
                             }
                         }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    
-                    // Favorites Section
-                    if !favoriteColors.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Favoriler")
-                                .font(.headline)
+                        
+                        // Ambiyans Kartı
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Image(systemName: "paintpalette.fill")
+                                    .foregroundStyle(ClioTheme.primaryGradient)
+                                    .font(.system(size: 18))
+                                Text("Ambiyans")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(ClioTheme.textPrimary)
+                            }
+                            
+                            // Quick Color Buttons with Color Picker at the start
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(Array(favoriteColors.enumerated()), id: \.offset) { index, fav in
-                                        Button(action: {
-                                            setQuickColor(r: fav.r, g: fav.g, b: fav.b)
-                                        }) {
-                                            VStack {
-                                                Circle()
-                                                    .fill(Color(
-                                                        red: Double(fav.r) / 255.0,
-                                                        green: Double(fav.g) / 255.0,
-                                                        blue: Double(fav.b) / 255.0
-                                                    ))
-                                                    .frame(width: 50, height: 50)
+                                HStack(spacing: 16) {
+                                    // Color Picker Button
+                                    VStack(spacing: 8) {
+                                        ZStack {
+                                            ColorPicker("Renk", selection: $selectedColor)
+                                                .labelsHidden()
+                                                .frame(width: 60, height: 60)
+                                            
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [
+                                                            Color(red: 1.0, green: 0.0, blue: 0.0),
+                                                            Color(red: 0.0, green: 1.0, blue: 0.0),
+                                                            Color(red: 0.0, green: 0.0, blue: 1.0),
+                                                            Color(red: 1.0, green: 0.0, blue: 1.0),
+                                                            Color(red: 1.0, green: 1.0, blue: 0.0),
+                                                            Color(red: 1.0, green: 0.5, blue: 0.0)
+                                                        ],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                                .frame(width: 60, height: 60)
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(ClioTheme.primaryOrange.opacity(0.3), lineWidth: 2)
+                                                )
+                                                .overlay(
+                                                    Image(systemName: "paintpalette.fill")
+                                                        .font(.system(size: 24))
+                                                        .foregroundColor(.white)
+                                                        .shadow(color: .black.opacity(0.3), radius: 2)
+                                                )
+                                                .allowsHitTesting(false)
+                                                .shadow(color: Color.blue.opacity(0.6), radius: 8, x: 0, y: 4)
+                                                .shadow(color: Color.blue.opacity(0.4), radius: 4, x: 0, y: 2)
+                                        }
+                                        .frame(width: 68, height: 68)
+                                        Text("Palet")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(ClioTheme.textPrimary)
+                                    }
+                                    .onChange(of: selectedColor) { newColor in
+                                        if bleManager.isConnected {
+                                            let uiColor = UIColor(newColor)
+                                            var r: CGFloat = 0
+                                            var g: CGFloat = 0
+                                            var b: CGFloat = 0
+                                            var a: CGFloat = 0
+                                            uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                                            bleManager.setColor(
+                                                r: Int(r * 255),
+                                                g: Int(g * 255),
+                                                b: Int(b * 255)
+                                            )
+                                        }
+                                    }
+                                    
+                                    QuickColorButton(color: .red, name: "Kırmızı") {
+                                        setQuickColor(r: 255, g: 0, b: 0)
+                                    }
+                                    QuickColorButton(color: .blue, name: "Mavi") {
+                                        setQuickColor(r: 0, g: 0, b: 255)
+                                    }
+                                    QuickColorButton(color: .green, name: "Yeşil") {
+                                        setQuickColor(r: 0, g: 255, b: 0)
+                                    }
+                                    QuickColorButton(color: .purple, name: "Mor") {
+                                        setQuickColor(r: 255, g: 0, b: 255)
+                                    }
+                                    QuickColorButton(color: .white, name: "Beyaz") {
+                                        setQuickColor(r: 255, g: 255, b: 255)
+                                    }
+                                    QuickColorButton(color: ClioTheme.primaryOrange, name: "Turuncu") {
+                                        setQuickColor(r: 243, g: 115, b: 38)
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        .clioCard()
+                        
+                        // Favorites Section
+                        if !favoriteColors.isEmpty {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Image(systemName: "star.fill")
+                                        .foregroundStyle(ClioTheme.primaryGradient)
+                                        .font(.system(size: 18))
+                                    Text("Favoriler")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(ClioTheme.textPrimary)
+                                }
+                                
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 16) {
+                                        ForEach(Array(favoriteColors.enumerated()), id: \.offset) { index, fav in
+                                            VStack(spacing: 8) {
+                                                Button(action: {
+                                                    setQuickColor(r: fav.r, g: fav.g, b: fav.b)
+                                                }) {
+                                                    Circle()
+                                                        .fill(Color(
+                                                            red: Double(fav.r) / 255.0,
+                                                            green: Double(fav.g) / 255.0,
+                                                            blue: Double(fav.b) / 255.0
+                                                        ))
+                                                        .frame(width: 60, height: 60)
+                                                        .overlay(
+                                                            Circle()
+                                                                .stroke(ClioTheme.primaryOrange.opacity(0.3), lineWidth: 2)
+                                                        )
+                                                        .shadow(color: Color(
+                                                            red: Double(fav.r) / 255.0,
+                                                            green: Double(fav.g) / 255.0,
+                                                            blue: Double(fav.b) / 255.0
+                                                        ).opacity(0.5), radius: 8)
+                                                }
+                                                
                                                 Button(action: {
                                                     removeFavorite(r: fav.r, g: fav.g, b: fav.b)
                                                 }) {
                                                     Image(systemName: "xmark.circle.fill")
                                                         .foregroundColor(.red)
+                                                        .font(.system(size: 20))
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 4)
+                                }
+                            }
+                            .clioCard()
+                        }
+                        
+                        // Add to Favorites Button
+                        if bleManager.isConnected {
+                            Button(action: {
+                                addCurrentColorToFavorites()
+                            }) {
+                                HStack {
+                                    Image(systemName: "star.fill")
+                                    Text("Favorilere Ekle")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .clioButton()
+                            }
+                            .disabled(!SharedLedController.shared.canAddMoreFavorites())
+                            .opacity(SharedLedController.shared.canAddMoreFavorites() ? 1.0 : 0.5)
+                        }
+                        
+                        // Brightness Slider
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Image(systemName: "sun.max.fill")
+                                    .foregroundStyle(ClioTheme.primaryGradient)
+                                    .font(.system(size: 18))
+                                Text("Parlaklık")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(ClioTheme.textPrimary)
+                                Spacer()
+                                Text("\(Int(brightness))%")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundStyle(ClioTheme.primaryGradient)
+                            }
+                            
+                            Slider(value: $brightness, in: 0...100, step: 1)
+                                .tint(ClioTheme.primaryOrange)
+                                .onChange(of: brightness) { newValue in
+                                    if bleManager.isConnected {
+                                        // İptal et önceki görev
+                                        brightnessUpdateTask?.cancel()
+                                        
+                                        // Debounce: Slider hareket ederken bekle, durduktan 150ms sonra gönder
+                                        brightnessUpdateTask = Task {
+                                            try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
+                                            guard !Task.isCancelled else { return }
+                                            await MainActor.run {
+                                                if bleManager.isConnected {
+                                                    bleManager.setBrightness(level: Int(newValue))
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-                    }
-                    
-                    // Add to Favorites Button
-                    if bleManager.isConnected {
+                        .clioCard()
+                        
+                        // Power Toggle
                         Button(action: {
-                            addCurrentColorToFavorites()
-                        }) {
-                            HStack {
-                                Image(systemName: "star.fill")
-                                Text("Favorilere Ekle")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.orange)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                        }
-                        .disabled(!SharedLedController.shared.canAddMoreFavorites())
-                    }
-                    
-                    // Brightness Slider
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Parlaklık: \(Int(brightness))%")
-                            .font(.headline)
-                        Slider(value: $brightness, in: 0...100, step: 1)
-                            .onChange(of: brightness) { newValue in
-                                if bleManager.isConnected {
-                                    // İptal et önceki görev
-                                    brightnessUpdateTask?.cancel()
-                                    
-                                    // Debounce: Slider hareket ederken bekle, durduktan 150ms sonra gönder
-                                    brightnessUpdateTask = Task {
-                                        try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
-                                        guard !Task.isCancelled else { return }
-                                        await MainActor.run {
-                                            if bleManager.isConnected {
-                                                bleManager.setBrightness(level: Int(newValue))
-                                            }
-                                        }
-                                    }
+                            isPowerOn.toggle()
+                            if bleManager.isConnected {
+                                if isPowerOn {
+                                    bleManager.powerOn()
+                                } else {
+                                    bleManager.powerOff()
                                 }
                             }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    
-                    // Power Toggle
-                    Button(action: {
-                        isPowerOn.toggle()
-                        if bleManager.isConnected {
-                            if isPowerOn {
-                                bleManager.powerOn()
-                            } else {
-                                bleManager.powerOff()
+                        }) {
+                            HStack {
+                                Image(systemName: isPowerOn ? "lightbulb.fill" : "lightbulb")
+                                    .font(.system(size: 20))
+                                Text(isPowerOn ? "LED Açık" : "LED Kapalı")
+                                    .font(.system(size: 18, weight: .semibold))
                             }
+                            .frame(maxWidth: .infinity)
+                            .clioButton(isPrimary: isPowerOn)
                         }
-                    }) {
-                        HStack {
-                            Image(systemName: isPowerOn ? "lightbulb.fill" : "lightbulb")
-                            Text(isPowerOn ? "Açık" : "Kapalı")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isPowerOn ? Color.green : Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .disabled(!bleManager.isConnected)
+                        .opacity(bleManager.isConnected ? 1.0 : 0.5)
                     }
-                    .disabled(!bleManager.isConnected)
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .padding()
-            }
-            .navigationTitle("LED Kontrol")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: DeviceSelectionView()) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                    }
+        }
+        .navigationTitle("Ayak LED Kontrolü")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(ClioTheme.backgroundDark, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: DeviceSelectionView()) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .foregroundStyle(ClioTheme.primaryGradient)
                 }
             }
-            .onAppear {
-                loadFavorites()
-                // Başlangıçta parlaklığı senkronize et
-                brightness = Double(bleManager.currentBrightness)
-            }
-            .onChange(of: bleManager.currentBrightness) { newBrightness in
-                // Dışarıdan parlaklık değiştiğinde (örneğin intent'lerden) slider'ı güncelle
-                if abs(brightness - Double(newBrightness)) > 1 {
-                    brightness = Double(newBrightness)
-                }
+        }
+        .onAppear {
+            loadFavorites()
+            // Başlangıçta parlaklığı senkronize et
+            brightness = Double(bleManager.currentBrightness)
+        }
+        .onChange(of: bleManager.currentBrightness) { newBrightness in
+            // Dışarıdan parlaklık değiştiğinde (örneğin intent'lerden) slider'ı güncelle
+            if abs(brightness - Double(newBrightness)) > 1 {
+                brightness = Double(newBrightness)
             }
         }
     }
@@ -278,15 +387,25 @@ struct QuickColorButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Circle()
-                    .fill(color)
-                    .frame(width: 50, height: 50)
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 60, height: 60)
+                        .overlay(
+                            Circle()
+                                .stroke(ClioTheme.primaryOrange.opacity(0.3), lineWidth: 2)
+                        )
+                        .shadow(color: color.opacity(0.6), radius: 8, x: 0, y: 4)
+                        .shadow(color: color.opacity(0.4), radius: 4, x: 0, y: 2)
+                }
+                .frame(width: 68, height: 68)
                 Text(name)
-                    .font(.caption)
-                    .foregroundColor(.primary)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(ClioTheme.textPrimary)
             }
         }
+        .buttonStyle(.plain)
     }
 }
 
