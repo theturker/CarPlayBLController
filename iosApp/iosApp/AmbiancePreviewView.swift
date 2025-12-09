@@ -7,13 +7,14 @@ struct AmbiancePreviewView: View {
     @State private var previewColor: Color = .white
     @State private var selectedColorIndex: Int? = nil
     
+    // RGB değerlerinden direkt Color oluşturuluyor - sistem renkleri yerine
     private let quickColors: [(color: Color, name: String, r: Int, g: Int, b: Int)] = [
-        (.red, "Kırmızı", 255, 0, 0),
-        (.blue, "Mavi", 0, 0, 255),
-        (.green, "Yeşil", 0, 255, 0),
-        (.purple, "Mor", 255, 0, 255),
-        (.white, "Beyaz", 255, 255, 255),
-        (ClioTheme.primaryOrange, "Turuncu", 243, 115, 38)
+        (Color(red: 1.0, green: 0.0, blue: 0.0), "Kırmızı", 255, 0, 0),
+        (Color(red: 0.0, green: 0.0, blue: 1.0), "Mavi", 0, 0, 255),
+        (Color(red: 0.0, green: 1.0, blue: 0.0), "Yeşil", 0, 255, 0),
+        (Color(red: 1.0, green: 0.0, blue: 1.0), "Mor", 255, 0, 255),
+        (Color(red: 1.0, green: 1.0, blue: 1.0), "Beyaz", 255, 255, 255),
+        (Color(red: 0.953, green: 0.451, blue: 0.149), "Turuncu", 243, 115, 38)
     ]
     
     private func updateSelectedColorIndex() {
@@ -93,11 +94,17 @@ struct AmbiancePreviewView: View {
                         Button(action: {
                             withAnimation(.easeInOut(duration: 0.4)) {
                                 selectedColorIndex = index
-                                previewColor = item.color
-                                selectedColor = item.color
+                                // RGB değerlerinden direkt Color oluştur - sistem renklerinden değil
+                                let colorFromRgb = Color(
+                                    red: Double(item.r) / 255.0,
+                                    green: Double(item.g) / 255.0,
+                                    blue: Double(item.b) / 255.0
+                                )
+                                previewColor = colorFromRgb
+                                selectedColor = colorFromRgb
                                 
                                 // Callback ile renk değişikliğini bildir
-                                onColorChanged(item.color)
+                                onColorChanged(colorFromRgb)
                             }
                         }) {
                             VStack(spacing: 6) {
