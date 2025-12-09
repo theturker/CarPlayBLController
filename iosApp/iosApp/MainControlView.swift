@@ -71,99 +71,102 @@ struct MainControlView: View {
                             }
                         }
                         
-                        // Ambiyans Kartı
+                        // Ambiyans Önizleme Alanı
+                        AmbiancePreviewView(selectedColor: $selectedColor) { newColor in
+                            // Renk değiştiğinde BLE'ye gönder
+                            selectedColor = newColor
+                            if bleManager.isConnected {
+                                let uiColor = UIColor(newColor)
+                                var r: CGFloat = 0
+                                var g: CGFloat = 0
+                                var b: CGFloat = 0
+                                var a: CGFloat = 0
+                                uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                                bleManager.setColor(
+                                    r: Int(r * 255),
+                                    g: Int(g * 255),
+                                    b: Int(b * 255)
+                                )
+                            }
+                        }
+                        .padding(.vertical, 12)
+                        .clioCard()
+                        
+                        // Ambiyans Kartı - Sadece Color Picker
                         VStack(alignment: .leading, spacing: 16) {
                             HStack {
                                 Image(systemName: "paintpalette.fill")
                                     .foregroundStyle(ClioTheme.primaryGradient)
                                     .font(.system(size: 18))
-                                Text("Ambiyans")
+                                Text("Renk Paleti")
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundColor(ClioTheme.textPrimary)
                             }
                             
-                            // Quick Color Buttons with Color Picker at the start
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    // Color Picker Button
-                                    VStack(spacing: 8) {
-                                        ZStack {
-                                            ColorPicker("Renk", selection: $selectedColor)
-                                                .labelsHidden()
-                                                .frame(width: 60, height: 60)
-                                            
-                                            Circle()
-                                                .fill(
-                                                    LinearGradient(
-                                                        colors: [
-                                                            Color(red: 1.0, green: 0.0, blue: 0.0),
-                                                            Color(red: 0.0, green: 1.0, blue: 0.0),
-                                                            Color(red: 0.0, green: 0.0, blue: 1.0),
-                                                            Color(red: 1.0, green: 0.0, blue: 1.0),
-                                                            Color(red: 1.0, green: 1.0, blue: 0.0),
-                                                            Color(red: 1.0, green: 0.5, blue: 0.0)
-                                                        ],
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    )
-                                                )
-                                                .frame(width: 60, height: 60)
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(ClioTheme.primaryOrange.opacity(0.3), lineWidth: 2)
-                                                )
-                                                .overlay(
-                                                    Image(systemName: "paintpalette.fill")
-                                                        .font(.system(size: 24))
-                                                        .foregroundColor(.white)
-                                                        .shadow(color: .black.opacity(0.3), radius: 2)
-                                                )
-                                                .allowsHitTesting(false)
-                                                .shadow(color: Color.blue.opacity(0.6), radius: 8, x: 0, y: 4)
-                                                .shadow(color: Color.blue.opacity(0.4), radius: 4, x: 0, y: 2)
-                                        }
-                                        .frame(width: 68, height: 68)
-                                        Text("Palet")
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(ClioTheme.textPrimary)
-                                    }
-                                    .onChange(of: selectedColor) { newColor in
-                                        if bleManager.isConnected {
-                                            let uiColor = UIColor(newColor)
-                                            var r: CGFloat = 0
-                                            var g: CGFloat = 0
-                                            var b: CGFloat = 0
-                                            var a: CGFloat = 0
-                                            uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-                                            bleManager.setColor(
-                                                r: Int(r * 255),
-                                                g: Int(g * 255),
-                                                b: Int(b * 255)
-                                            )
-                                        }
-                                    }
+                            // Color Picker
+                            HStack {
+                                ZStack {
+                                    ColorPicker("Renk", selection: $selectedColor)
+                                        .labelsHidden()
+                                        .frame(width: 60, height: 60)
                                     
-                                    QuickColorButton(color: .red, name: "Kırmızı") {
-                                        setQuickColor(r: 255, g: 0, b: 0)
-                                    }
-                                    QuickColorButton(color: .blue, name: "Mavi") {
-                                        setQuickColor(r: 0, g: 0, b: 255)
-                                    }
-                                    QuickColorButton(color: .green, name: "Yeşil") {
-                                        setQuickColor(r: 0, g: 255, b: 0)
-                                    }
-                                    QuickColorButton(color: .purple, name: "Mor") {
-                                        setQuickColor(r: 255, g: 0, b: 255)
-                                    }
-                                    QuickColorButton(color: .white, name: "Beyaz") {
-                                        setQuickColor(r: 255, g: 255, b: 255)
-                                    }
-                                    QuickColorButton(color: ClioTheme.primaryOrange, name: "Turuncu") {
-                                        setQuickColor(r: 243, g: 115, b: 38)
-                                    }
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color(red: 1.0, green: 0.0, blue: 0.0),
+                                                    Color(red: 0.0, green: 1.0, blue: 0.0),
+                                                    Color(red: 0.0, green: 0.0, blue: 1.0),
+                                                    Color(red: 1.0, green: 0.0, blue: 1.0),
+                                                    Color(red: 1.0, green: 1.0, blue: 0.0),
+                                                    Color(red: 1.0, green: 0.5, blue: 0.0)
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 60, height: 60)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(ClioTheme.primaryOrange.opacity(0.3), lineWidth: 2)
+                                        )
+                                        .overlay(
+                                            Image(systemName: "paintpalette.fill")
+                                                .font(.system(size: 24))
+                                                .foregroundColor(.white)
+                                                .shadow(color: .black.opacity(0.3), radius: 2)
+                                        )
+                                        .allowsHitTesting(false)
+                                        .shadow(color: Color.blue.opacity(0.6), radius: 8, x: 0, y: 4)
+                                        .shadow(color: Color.blue.opacity(0.4), radius: 4, x: 0, y: 2)
                                 }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
+                                .frame(width: 68, height: 68)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Özel Renk Seç")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(ClioTheme.textPrimary)
+                                    Text("Palete dokunarak istediğiniz rengi seçin")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(ClioTheme.textSecondary)
+                                }
+                                
+                                Spacer()
+                            }
+                            .onChange(of: selectedColor) { newColor in
+                                if bleManager.isConnected {
+                                    let uiColor = UIColor(newColor)
+                                    var r: CGFloat = 0
+                                    var g: CGFloat = 0
+                                    var b: CGFloat = 0
+                                    var a: CGFloat = 0
+                                    uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                                    bleManager.setColor(
+                                        r: Int(r * 255),
+                                        g: Int(g * 255),
+                                        b: Int(b * 255)
+                                    )
+                                }
                             }
                         }
                         .clioCard()
